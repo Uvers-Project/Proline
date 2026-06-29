@@ -31,8 +31,18 @@ class AuthController extends Controller
         try {
             $googleUser = Socialite::driver('google')->stateless()->user();
 
+            $allowedEmails = [
+                'yurikoaishinselo@uvers.ac.id',
+                'asrulpuadi@gmail.com',
+                'yongming.ja@gmail.com'
+            ];
+
+            if (!in_array(strtolower($googleUser->getEmail()), $allowedEmails)) {
+                return redirect('/login?error=unauthorized');
+            }
+
             $user = User::updateOrCreate(
-                ['email' => $googleUser->getEmail()],
+                ['email' => strtolower($googleUser->getEmail())],
                 [
                     'name' => $googleUser->getName(),
                     'google_id' => $googleUser->getId(),
@@ -44,9 +54,8 @@ class AuthController extends Controller
 
             $token = $user->createToken('auth_token')->plainTextToken;
 
-            // Redirect back to frontend with the token
-            $frontendUrl = env('FRONTEND_URL', 'http://localhost:5173');
-            return redirect()->away($frontendUrl . '/auth/callback?token=' . $token);
+            // Redirect back to frontend with the token (now on the same domain)
+            return redirect('/auth/callback?token=' . $token);
 
         } catch (\Exception $e) {
             return response()->json(['error' => 'Authentication failed'], 500);
