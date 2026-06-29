@@ -1,0 +1,10 @@
+@import "tailwindcss";
+
+/* Custom variables and base styles */
+:root {
+  --primary: #3b82f6; /* blue-500 */
+}
+
+body {
+  @apply bg-gray-50 text-gray-900;
+}
