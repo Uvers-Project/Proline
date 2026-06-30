@@ -862,19 +862,25 @@ onMounted(async () => {
 
   pageReady.value = true
   
-  // Real-time polling is temporarily disabled
-  // pollingInterval = setInterval(() => {
-  //   // Only poll if there's no modal open that could be disrupted by a silent refresh, 
-  //   // actually silent refresh is perfectly fine since Vue handles reactivity smoothly!
-  //   // But don't poll if we are actively editing a task to prevent overwriting inputs.
-  //   if (!isEditingTask.value) {
-  //     taskStore.fetchProjectTasks(route.params.id, true)
-  //   }
-  // }, 5000)
+  // Real-time Websocket Updates
+  if (window.Echo) {
+    window.Echo.private('project.' + route.params.id)
+      .listen('.TaskCreated', (e) => {
+        taskStore.fetchProjectTasks(route.params.id, true)
+      })
+      .listen('.TaskUpdated', (e) => {
+        taskStore.fetchProjectTasks(route.params.id, true)
+      })
+      .listen('.TaskDeleted', (e) => {
+        taskStore.fetchProjectTasks(route.params.id, true)
+      })
+  }
 })
 
 onUnmounted(() => {
-  if (pollingInterval) clearInterval(pollingInterval)
+  if (window.Echo) {
+    window.Echo.leave('project.' + route.params.id)
+  }
 })
 
 const columns = [

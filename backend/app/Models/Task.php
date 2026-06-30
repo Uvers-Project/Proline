@@ -5,10 +5,17 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\BroadcastsEvents;
+use Illuminate\Broadcasting\PrivateChannel;
 
 class Task extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, BroadcastsEvents;
+
+    public function broadcastOn($event)
+    {
+        return [new PrivateChannel('project.' . $this->project_id)];
+    }
 
     protected $table = 'tasks';
 
