@@ -17,6 +17,11 @@ class Task extends Model
         return [new PrivateChannel('project.' . $this->project_id)];
     }
 
+    public function broadcastAs($event)
+    {
+        return 'Task' . ucfirst($event);
+    }
+
     protected $table = 'tasks';
 
     protected $fillable = [

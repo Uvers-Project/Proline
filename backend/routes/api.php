@@ -58,3 +58,5 @@ Route::prefix('v1')->group(function () {
         Route::post('/invitations/accept', [InvitationController::class, 'accept']);
     });
 });
+
+\Illuminate\Support\Facades\Broadcast::routes(['middleware' => ['auth:sanctum']]);

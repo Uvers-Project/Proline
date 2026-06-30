@@ -15,7 +15,7 @@ window.Echo = new Echo({
     authorizer: (channel, options) => {
         return {
             authorize: (socketId, callback) => {
-                axios.post('/broadcasting/auth', {
+                axios.post('/api/broadcasting/auth', {
                     socket_id: socketId,
                     channel_name: channel.name
                 })
