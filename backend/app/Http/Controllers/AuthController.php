@@ -15,7 +15,10 @@ class AuthController extends Controller
      */
     public function redirectToGoogle()
     {
-        return Socialite::driver('google')
+        /** @var \Laravel\Socialite\Two\GoogleProvider $driver */
+        $driver = Socialite::driver('google');
+        
+        return $driver
             ->stateless()
             ->with(['prompt' => 'select_account'])
             ->redirect();
@@ -29,7 +32,9 @@ class AuthController extends Controller
     public function handleGoogleCallback()
     {
         try {
-            $googleUser = Socialite::driver('google')->stateless()->user();
+            /** @var \Laravel\Socialite\Two\GoogleProvider $driver */
+            $driver = Socialite::driver('google');
+            $googleUser = $driver->stateless()->user();
 
             $allowedEmails = [
                 'yurikoaishinselo@uvers.ac.id',

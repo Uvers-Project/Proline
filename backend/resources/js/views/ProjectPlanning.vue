@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-col h-screen bg-gray-50 relative overflow-hidden">
+  <div class="fixed inset-0 flex flex-col bg-gray-50 overflow-hidden">
     <!-- Header -->
     <div class="flex-none px-8 py-6 border-b border-gray-200 bg-white z-30 shadow-sm relative">
       <div class="flex justify-between items-start">
@@ -57,12 +57,10 @@
       </div>
     </div>
 
-    <!-- Kanban Board -->
-    <div class="flex-1 overflow-hidden p-6 flex flex-col">
-      <div class="flex-1 overflow-x-auto overflow-y-hidden">
-        <div class="flex items-start gap-6 h-full min-w-max">
-        
-        <!-- Column Iterator -->
+    <!-- Kanban Board Area -->
+    <div class="flex-1 min-h-0 overflow-x-auto overflow-y-hidden p-6 pb-16" @dragover.prevent @drop="onDropTrash">
+      <!-- Actual Kanban Columns -->
+      <div class="flex gap-6 h-full items-start">
         <div v-for="col in columns" :key="col.id" :class="`w-80 flex flex-col rounded-3xl border shadow-sm overflow-hidden max-h-full ${col.bgClass} ${col.borderClass}`">
           <div :class="`px-5 py-4 border-b bg-white/50 backdrop-blur-sm flex justify-between items-center shrink-0 ${col.headerBorderClass}`">
             <div class="flex items-center space-x-2">
@@ -128,18 +126,18 @@
                     :title="getUserName(t.assigned_to)">{{ getUserInitials(t.assigned_to) }}</div>
                 </div>
               </div>
-            </div>
           </div>
         </div>
-
       </div>
     </div>
     
-    <!-- Footer -->
-    <div class="flex-none py-3 px-8 text-center border-t border-gray-200 text-xs font-bold text-gray-400 bg-white shadow-[0_-4px_6px_-1px_rgb(0,0,0,0.02)] relative z-20">
-       Project created by <span class="text-gray-600">{{ projectStore.currentProject?.creator?.name || 'Unknown' }}</span>
+    <!-- Absolute Footer -->
+    <div class="absolute bottom-0 left-0 w-full h-12 flex items-center justify-center bg-white/80 backdrop-blur-md border-t border-gray-200/50 shadow-[0_-4px_10px_-2px_rgba(0,0,0,0.03)] z-20 pointer-events-none">
+       <span class="text-xs font-bold text-gray-400">
+         Project created by <span class="text-gray-600">{{ projectStore.currentProject?.creator?.name || 'Unknown' }}</span>
+       </span>
     </div>
-    
+
   </div>
 
     <!-- New Task Modal -->
@@ -167,16 +165,28 @@
           
           <div class="grid grid-cols-2 gap-4">
             <div>
-               <label class="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+               <label class="block text-sm font-medium text-gray-700 mb-1">Start Date (Planned)</label>
                <input type="date" v-model="newTask.start_date" :class="{'border-red-400 ring-2 ring-red-400/20': formErrors.start_date}" class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-colors" />
                <p v-if="formErrors.start_date" class="text-xs text-red-500 mt-1 font-medium">{{ formErrors.start_date }}</p>
             </div>
             <div>
-               <label class="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+               <label class="block text-sm font-medium text-gray-700 mb-1">End Date (Planned)</label>
                <input type="date" v-model="newTask.end_date" :class="{'border-red-400 ring-2 ring-red-400/20': formErrors.end_date}" class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-colors" />
                <p v-if="formErrors.end_date" class="text-xs text-red-500 mt-1 font-medium">{{ formErrors.end_date }}</p>
             </div>
           </div>
+          
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+               <label class="block text-sm font-medium text-gray-700 mb-1">Real Start Date</label>
+               <input type="date" v-model="newTask.real_start_date" :class="{'border-red-400 ring-2 ring-red-400/20': formErrors.real_start_date}" class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-colors bg-blue-50/50" />
+            </div>
+            <div>
+               <label class="block text-sm font-medium text-gray-700 mb-1">Real End Date</label>
+               <input type="date" v-model="newTask.real_end_date" :class="{'border-red-400 ring-2 ring-red-400/20': formErrors.real_end_date}" class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-colors bg-blue-50/50" />
+            </div>
+          </div>
+
 
           <div class="grid grid-cols-2 gap-4">
             <div>
@@ -263,12 +273,13 @@
           <div class="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mb-4 mx-auto">
             <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
           </div>
-          <h3 class="text-lg font-bold text-gray-900 text-center mb-2">Task is Blocked</h3>
-          <p class="text-sm text-gray-500 text-center">This subtask is currently marked as blocked. Are you sure you want to mark it as done?</p>
+          <h3 class="text-lg font-bold text-gray-900 text-center mb-2">Resolve Blocker</h3>
+          <p class="text-sm text-gray-500 text-center mb-4">This task is marked as blocked. How was this issue solved?</p>
+          <textarea v-model="blockedConfirmReason" rows="3" class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 transition-colors" placeholder="Resolution notes..."></textarea>
         </div>
         <div class="bg-gray-50 px-6 py-4 flex gap-3 justify-end border-t border-gray-100">
           <button @click="cancelBlockedAction" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex-1">Cancel</button>
-          <button @click="confirmBlockedAction" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700 transition-colors shadow-sm flex-1">Yes, mark as done</button>
+          <button @click="confirmBlockedAction" :disabled="!blockedConfirmReason.trim()" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700 transition-colors shadow-sm flex-1 disabled:opacity-50 disabled:cursor-not-allowed">Mark as Done</button>
         </div>
       </div>
     </div>
@@ -371,10 +382,6 @@
                 <p class="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">
                   {{ selectedTask.description || 'No description provided.' }}
                 </p>
-                <div v-if="selectedTask.blocked_description" class="mt-4 bg-red-50 border border-red-100 rounded-xl p-4">
-                  <h4 class="text-[10px] font-black text-red-800 uppercase tracking-widest mb-1">Blocker Note</h4>
-                  <p class="text-sm text-red-700 leading-relaxed whitespace-pre-wrap">{{ selectedTask.blocked_description }}</p>
-                </div>
               </div>
 
               <div class="bg-gray-50 rounded-2xl p-5 border border-gray-100 space-y-5">
@@ -389,14 +396,25 @@
                   </div>
                 </div>
                 
-                <div class="flex justify-between items-center">
-                  <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Timeline</span>
-                  <span class="text-xs font-bold text-gray-900 bg-white border border-gray-200 px-2 py-1 rounded shadow-sm">
-                    <span v-if="selectedTask.start_date || selectedTask.end_date">
-                      {{ formatDateShort(selectedTask.start_date) }} - {{ formatDateShort(selectedTask.end_date) }}
+                <div class="flex flex-col space-y-3">
+                  <div class="flex justify-between items-center">
+                    <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Planned Timeline</span>
+                    <span class="text-xs font-bold text-gray-900 bg-white border border-gray-200 px-2 py-1 rounded shadow-sm">
+                      <span v-if="selectedTask.start_date || selectedTask.end_date">
+                        {{ formatDateShort(selectedTask.start_date) }} - {{ formatDateShort(selectedTask.end_date) }}
+                      </span>
+                      <span v-else>Unscheduled</span>
                     </span>
-                    <span v-else>Unscheduled</span>
-                  </span>
+                  </div>
+                  <div class="flex justify-between items-center">
+                    <span class="text-[10px] font-bold text-blue-500 uppercase tracking-wider">Real Timeline</span>
+                    <span class="text-xs font-bold text-blue-900 bg-blue-50 border border-blue-200 px-2 py-1 rounded shadow-sm">
+                      <span v-if="selectedTask.real_start_date || selectedTask.real_end_date">
+                        {{ formatDateShort(selectedTask.real_start_date) }} - {{ formatDateShort(selectedTask.real_end_date) }}
+                      </span>
+                      <span v-else>Pending</span>
+                    </span>
+                  </div>
                 </div>
                 
                 <div class="flex justify-between items-center">
@@ -426,6 +444,7 @@
                         <div class="flex items-center gap-2">
                           <span class="text-sm font-medium cursor-pointer" :class="sub.status === 'Done' ? 'text-gray-400 line-through' : (sub.status === 'Blocked' ? 'text-red-800' : 'text-gray-700')" @click="openTaskDetail(sub)">{{ sub.title }}</span>
                           <span v-if="sub.status === 'Blocked'" class="text-[9px] font-bold bg-red-100 text-red-700 px-1.5 py-0.5 rounded border border-red-200 flex items-center shadow-sm">Blocked</span>
+                          <span v-if="sub.status === 'In Progress'" class="text-[9px] font-bold bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded border border-blue-200 flex items-center shadow-sm">In Progress</span>
                         </div>
                         <span v-if="sub.description" class="text-xs mt-0.5" :class="sub.status === 'Blocked' ? 'text-red-500' : 'text-gray-500'">{{ sub.description }}</span>
                       </div>
@@ -440,6 +459,55 @@
                       <button @click.stop="deleteSubtask(sub.id)" class="text-gray-300 hover:text-red-500 transition-colors">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                       </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Unified Issue Log -->
+                <div v-if="taskIssues.length > 0" class="mt-6 border-t border-dashed border-gray-200 pt-6">
+                  <h4 class="text-xs font-black text-gray-800 uppercase tracking-widest mb-4">Issue Log</h4>
+                  <div class="space-y-3">
+                    <div v-for="issue in taskIssues" :key="issue.id" class="flex flex-col border border-gray-200 p-4 rounded-xl shadow-sm bg-white transition-colors hover:border-gray-300">
+                      <div class="flex items-center gap-2 mb-3 pb-2 border-b border-gray-100">
+                        <svg class="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                        <span class="text-sm font-bold text-gray-800">Issue on: {{ issue.taskTitle }}</span>
+                        <span class="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded bg-gray-100 text-gray-500 ml-auto">{{ issue.isMain ? 'Main Task' : 'Subtask' }}</span>
+                      </div>
+                      
+                      <div class="space-y-3">
+                        <div v-if="issue.problem" class="bg-red-50/50 p-3 rounded-lg border border-red-100 group">
+                           <h5 class="text-[9px] font-black text-red-700 uppercase tracking-widest mb-1 flex justify-between items-center">
+                             Problem
+                             <button v-if="editingIssueId !== issue.id || editingIssueField !== 'problem'" @click="startEditingIssue(issue, 'problem')" class="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 transition-opacity">
+                               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                             </button>
+                           </h5>
+                           <div v-if="editingIssueId === issue.id && editingIssueField === 'problem'" class="mt-2">
+                             <textarea v-model="editingIssueText" rows="3" class="w-full p-2 text-xs border border-red-300 rounded focus:ring-1 focus:ring-red-500 outline-none bg-white"></textarea>
+                             <div class="flex justify-end gap-2 mt-2">
+                               <button @click="cancelIssueEdit" class="text-[10px] font-bold text-gray-500 hover:text-gray-700 px-2 py-1">Cancel</button>
+                               <button @click="saveIssueEdit(issue)" :disabled="isSavingIssue" class="text-[10px] font-bold text-white bg-red-600 hover:bg-red-700 px-3 py-1 rounded shadow-sm disabled:opacity-50">Save</button>
+                             </div>
+                           </div>
+                           <p v-else @click="startEditingIssue(issue, 'problem')" class="text-xs text-red-900 leading-relaxed cursor-pointer hover:bg-red-100/50 p-1 -mx-1 rounded transition-colors">{{ issue.problem }}</p>
+                        </div>
+                        <div v-if="issue.solution" class="bg-blue-50/50 p-3 rounded-lg border border-blue-100 group">
+                           <h5 class="text-[9px] font-black text-blue-700 uppercase tracking-widest mb-1 flex justify-between items-center">
+                             Solution
+                             <button v-if="editingIssueId !== issue.id || editingIssueField !== 'solution'" @click="startEditingIssue(issue, 'solution')" class="opacity-0 group-hover:opacity-100 text-blue-500 hover:text-blue-700 transition-opacity">
+                               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                             </button>
+                           </h5>
+                           <div v-if="editingIssueId === issue.id && editingIssueField === 'solution'" class="mt-2">
+                             <textarea v-model="editingIssueText" rows="3" class="w-full p-2 text-xs border border-blue-300 rounded focus:ring-1 focus:ring-blue-500 outline-none bg-white"></textarea>
+                             <div class="flex justify-end gap-2 mt-2">
+                               <button @click="cancelIssueEdit" class="text-[10px] font-bold text-gray-500 hover:text-gray-700 px-2 py-1">Cancel</button>
+                               <button @click="saveIssueEdit(issue)" :disabled="isSavingIssue" class="text-[10px] font-bold text-white bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded shadow-sm disabled:opacity-50">Save</button>
+                             </div>
+                           </div>
+                           <p v-else @click="startEditingIssue(issue, 'solution')" class="text-xs text-blue-900 leading-relaxed cursor-pointer hover:bg-blue-100/50 p-1 -mx-1 rounded transition-colors">{{ issue.solution }}</p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -480,17 +548,31 @@
                    <label class="block text-xs font-bold text-red-500 uppercase tracking-wider mb-1.5">Blocker Note</label>
                    <textarea v-model="editTaskForm.blocked_description" rows="3" class="w-full p-4 bg-red-50/30 border border-red-200 rounded-xl text-red-700 text-sm leading-relaxed focus:ring-2 focus:ring-red-500 outline-none shadow-sm"></textarea>
                 </div>
+                <div v-if="editTaskForm.resolution_notes">
+                   <label class="block text-xs font-bold text-blue-500 uppercase tracking-wider mb-1.5">Resolution Notes</label>
+                   <textarea v-model="editTaskForm.resolution_notes" rows="3" class="w-full p-4 bg-blue-50/30 border border-blue-200 rounded-xl text-blue-700 text-sm leading-relaxed focus:ring-2 focus:ring-blue-500 outline-none shadow-sm"></textarea>
+                </div>
                 <template v-if="!selectedTask.parent_id">
                   <div class="grid grid-cols-2 gap-4">
                     <div>
-                       <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Start Date</label>
+                       <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Start Date (Planned)</label>
                        <input type="date" v-model="editTaskForm.start_date" :class="{'border-red-300 ring-1 ring-red-300': formErrors.start_date, 'border-gray-200': !formErrors.start_date}" class="w-full text-sm font-bold bg-white border rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none shadow-sm transition-colors" />
                        <p v-if="formErrors.start_date" class="text-xs text-red-500 mt-1 font-medium">{{ formErrors.start_date }}</p>
                     </div>
                     <div>
-                       <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">End Date</label>
+                       <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">End Date (Planned)</label>
                        <input type="date" v-model="editTaskForm.end_date" :class="{'border-red-300 ring-1 ring-red-300': formErrors.end_date, 'border-gray-200': !formErrors.end_date}" class="w-full text-sm font-bold bg-white border rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none shadow-sm transition-colors" />
                        <p v-if="formErrors.end_date" class="text-xs text-red-500 mt-1 font-medium">{{ formErrors.end_date }}</p>
+                    </div>
+                  </div>
+                  <div class="grid grid-cols-2 gap-4">
+                    <div>
+                       <label class="block text-xs font-bold text-blue-500 uppercase tracking-wider mb-1.5">Real Start Date</label>
+                       <input type="date" v-model="editTaskForm.real_start_date" class="w-full text-sm font-bold bg-blue-50/30 border border-blue-100 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none shadow-sm transition-colors" />
+                    </div>
+                    <div>
+                       <label class="block text-xs font-bold text-blue-500 uppercase tracking-wider mb-1.5">Real End Date</label>
+                       <input type="date" v-model="editTaskForm.real_end_date" class="w-full text-sm font-bold bg-blue-50/30 border border-blue-100 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none shadow-sm transition-colors" />
                     </div>
                   </div>
                   <div class="grid grid-cols-2 gap-4">
@@ -656,11 +738,36 @@
         </form>
       </div>
     </div>
+    <!-- Unblock Task Modal -->
+    <div v-if="showUnblockModal" class="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
+      <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 animate-in zoom-in-95 duration-200">
+        <div class="flex items-center space-x-3 mb-4">
+          <div class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 shrink-0">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+          </div>
+          <div>
+            <h3 class="text-xl font-bold text-gray-900 leading-tight">Resolve Blocker</h3>
+            <p class="text-sm text-gray-500 mt-0.5">How was this issue solved?</p>
+          </div>
+        </div>
+        
+        <div class="mt-4">
+          <textarea v-model="unblockTaskReason" rows="3" placeholder="Enter resolution notes here..." class="w-full text-sm border border-gray-200 rounded-xl p-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 bg-gray-50/50 resize-none"></textarea>
+        </div>
+        
+        <div class="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-100">
+          <button @click="cancelUnblockTask" class="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-xl font-medium transition-colors">Cancel</button>
+          <button @click="confirmUnblockTask" :disabled="!unblockTaskReason.trim()" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed text-white rounded-xl font-medium shadow-sm transition-colors shadow-blue-500/30">
+            Resolve Issue
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useTaskStore } from '../stores/task'
 import { useAuthStore } from '../stores/auth'
@@ -676,8 +783,41 @@ const projectStore = useProjectStore()
 const modal = useModal()
 const toast = useToast()
 
-const showEditModal = ref(false)
+const pageReady = ref(false)
 const isSubmittingEdit = ref(false)
+
+const taskIssues = computed(() => {
+  if (!selectedTask.value) return [];
+  const issues = [];
+  
+  if (selectedTask.value.blocked_description || selectedTask.value.resolution_notes) {
+    issues.push({
+      id: 'main-' + selectedTask.value.id,
+      originalId: selectedTask.value.id,
+      taskTitle: selectedTask.value.title,
+      isMain: true,
+      problem: selectedTask.value.blocked_description,
+      solution: selectedTask.value.resolution_notes
+    });
+  }
+  
+  if (selectedTask.value.subtasks) {
+    selectedTask.value.subtasks.forEach(sub => {
+      if (sub.blocked_description || sub.resolution_notes) {
+        issues.push({
+          id: 'sub-' + sub.id,
+          originalId: sub.id,
+          taskTitle: sub.title,
+          isMain: false,
+          problem: sub.blocked_description,
+          solution: sub.resolution_notes
+        });
+      }
+    });
+  }
+  
+  return issues;
+});
 const editProjectForm = ref({
   name: '',
   description: '',
@@ -716,25 +856,30 @@ const submitEditProject = async () => {
 let pollingInterval = null;
 
 onMounted(async () => {
-  if (!projectStore.currentProject || projectStore.currentProject.id != route.params.id) {
-    await projectStore.fetchProject(route.params.id)
-  }
-  if (!taskStore.projectTasks || taskStore.projectTasks.length === 0) {
-    await taskStore.fetchProjectTasks(route.params.id)
-  }
-  if (authStore.allUsers.length === 0) {
-    await authStore.fetchAllUsers()
-  }
+  pageReady.value = false
+
+  // Fetch project and tasks in parallel for speed
+  await Promise.all([
+    (!projectStore.currentProject || projectStore.currentProject.id != route.params.id)
+      ? projectStore.fetchProject(route.params.id)
+      : Promise.resolve(),
+    taskStore.fetchProjectTasks(route.params.id),
+    authStore.allUsers.length === 0
+      ? authStore.fetchAllUsers()
+      : Promise.resolve()
+  ])
+
+  pageReady.value = true
   
-  // Real-time polling
-  pollingInterval = setInterval(() => {
-    // Only poll if there's no modal open that could be disrupted by a silent refresh, 
-    // actually silent refresh is perfectly fine since Vue handles reactivity smoothly!
-    // But don't poll if we are actively editing a task to prevent overwriting inputs.
-    if (!isEditingTask.value) {
-      taskStore.fetchProjectTasks(route.params.id, true)
-    }
-  }, 5000)
+  // Real-time polling is temporarily disabled
+  // pollingInterval = setInterval(() => {
+  //   // Only poll if there's no modal open that could be disrupted by a silent refresh, 
+  //   // actually silent refresh is perfectly fine since Vue handles reactivity smoothly!
+  //   // But don't poll if we are actively editing a task to prevent overwriting inputs.
+  //   if (!isEditingTask.value) {
+  //     taskStore.fetchProjectTasks(route.params.id, true)
+  //   }
+  // }, 5000)
 })
 
 onUnmounted(() => {
@@ -743,7 +888,7 @@ onUnmounted(() => {
 
 const columns = [
   { id: 'Backlog', label: 'Backlog', bgClass: 'bg-slate-200/70', borderClass: 'border-slate-200', headerBorderClass: 'border-slate-200', textClass: 'text-gray-800', dotClass: 'bg-gray-400', countClass: 'border-gray-300 text-gray-500', cardBorderHoverClass: 'hover:border-gray-300' },
-  { id: 'In Progress', label: 'In Progress', bgClass: 'bg-blue-50/50', borderClass: 'border-blue-100', headerBorderClass: 'border-blue-100', textClass: 'text-blue-900', dotClass: 'bg-blue-500 animate-pulse', countClass: 'border-blue-100 text-blue-600', cardBorderHoverClass: 'hover:border-blue-300' },
+  { id: 'In Progress', label: 'In Progress', bgClass: 'bg-blue-50/50', borderClass: 'border-blue-100', headerBorderClass: 'border-blue-100', textClass: 'text-blue-900', dotClass: 'bg-blue-500', countClass: 'border-blue-100 text-blue-600', cardBorderHoverClass: 'hover:border-blue-300' },
   { id: 'Done', label: 'Done', bgClass: 'bg-green-50/50', borderClass: 'border-green-100', headerBorderClass: 'border-green-100', textClass: 'text-green-900', dotClass: 'bg-green-500', countClass: 'border-green-100 text-green-600', cardBorderHoverClass: 'hover:border-green-300' },
   { id: 'Cancelled', label: 'Cancelled', bgClass: 'bg-gray-100/50', borderClass: 'border-gray-200', headerBorderClass: 'border-gray-200', textClass: 'text-gray-500', dotClass: 'bg-gray-300', countClass: 'border-gray-200 text-gray-400', cardBorderHoverClass: 'hover:border-gray-300 opacity-70 hover:opacity-100' }
 ]
@@ -808,7 +953,19 @@ const kanbanColumns = computed(() => {
 })
 
 const showNewTaskModal = ref(false)
-const newTask = ref({ title: '', description: '', priority: 'Medium', category: 'Development', start_date: '', end_date: '', assigned_to: null, subtasks: [] })
+const newTask = ref({ title: '', description: '', priority: 'Medium', category: 'Development', start_date: '', end_date: '', real_start_date: '', real_end_date: '', assigned_to: null, subtasks: [] })
+
+watch(() => newTask.value.start_date, (newVal) => {
+  if (newVal && !newTask.value.real_start_date) {
+    newTask.value.real_start_date = newVal;
+  }
+})
+
+watch(() => newTask.value.end_date, (newVal) => {
+  if (newVal && !newTask.value.real_end_date) {
+    newTask.value.real_end_date = newVal;
+  }
+})
 
 const showTaskDetailModal = ref(false)
 const selectedTask = ref(null)
@@ -835,10 +992,57 @@ const showBlockedConfirmModal = ref(false)
 const showBlockTaskModal = ref(false)
 const taskToBlock = ref(null)
 const blockTaskReason = ref('')
+const showUnblockModal = ref(false)
+const taskToUnblock = ref(null)
+const unblockTaskReason = ref('')
 const blockedConfirmSubtask = ref(null)
 const blockedConfirmEventTarget = ref(null)
 
 const formErrors = ref({})
+
+// Inline Issue Editing State
+const editingIssueId = ref(null)
+const editingIssueField = ref(null)
+const editingIssueText = ref('')
+const isSavingIssue = ref(false)
+
+const startEditingIssue = (issue, field) => {
+  editingIssueId.value = issue.id
+  editingIssueField.value = field
+  editingIssueText.value = issue[field] || ''
+}
+
+const cancelIssueEdit = () => {
+  editingIssueId.value = null
+  editingIssueField.value = null
+}
+
+const saveIssueEdit = async (issue) => {
+  isSavingIssue.value = true
+  try {
+    const updateData = {}
+    if (editingIssueField.value === 'problem') updateData.blocked_description = editingIssueText.value
+    else updateData.resolution_notes = editingIssueText.value
+    
+    await taskStore.updateProjectTask(route.params.id, issue.originalId, updateData)
+    
+    if (issue.isMain) {
+      if (editingIssueField.value === 'problem') selectedTask.value.blocked_description = editingIssueText.value
+      else selectedTask.value.resolution_notes = editingIssueText.value
+    } else {
+      const sub = selectedTask.value.subtasks.find(s => s.id === issue.originalId)
+      if (sub) {
+        if (editingIssueField.value === 'problem') sub.blocked_description = editingIssueText.value
+        else sub.resolution_notes = editingIssueText.value
+      }
+    }
+  } catch(e) {
+    toast.showToast('Failed to update note', 'Error')
+  } finally {
+    isSavingIssue.value = false
+    cancelIssueEdit()
+  }
+}
 
 const validateTaskForm = (form) => {
   const errors = {};
@@ -883,6 +1087,8 @@ const startEditing = () => {
   // Ensure dates are correctly formatted for input
   if (editTaskForm.value.start_date) editTaskForm.value.start_date = editTaskForm.value.start_date.split('T')[0]
   if (editTaskForm.value.end_date) editTaskForm.value.end_date = editTaskForm.value.end_date.split('T')[0]
+  if (editTaskForm.value.real_start_date) editTaskForm.value.real_start_date = editTaskForm.value.real_start_date.split('T')[0]
+  if (editTaskForm.value.real_end_date) editTaskForm.value.real_end_date = editTaskForm.value.real_end_date.split('T')[0]
   formErrors.value = {}
   isEditingTask.value = true
 }
@@ -1016,7 +1222,10 @@ const createTask = async () => {
     }
     
     showNewTaskModal.value = false
-    newTask.value = { title: '', description: '', priority: 'Medium', category: 'Development', start_date: '', end_date: '', assigned_to: null, subtasks: [] }
+    newTask.value = { title: '', description: '', priority: 'Medium', category: 'Development', start_date: '', end_date: '',
+      real_start_date: '',
+      real_end_date: '',
+      assigned_to: null, subtasks: [] }
     formErrors.value = {}
   } catch(error) {
     toast.showToast('Failed to create task', 'Error')
@@ -1080,15 +1289,19 @@ const toggleMainTask = async (task, event) => {
   }
 }
 
-const executeToggleMainTask = async (task, newStatus) => {
+const executeToggleMainTask = async (task, newStatus, resolutionNotes = null) => {
   try {
     const updateData = { status: newStatus }
-    if (newStatus === 'Done') updateData.blocked_description = ''
+    if (newStatus === 'Done') {
+      if (resolutionNotes) updateData.resolution_notes = resolutionNotes
+    }
     
     await taskStore.updateProjectTask(route.params.id, task.id, updateData)
     if (selectedTask.value && selectedTask.value.id === task.id) {
       selectedTask.value.status = newStatus
-      if (newStatus === 'Done') selectedTask.value.blocked_description = ''
+      if (newStatus === 'Done') {
+        if (resolutionNotes) selectedTask.value.resolution_notes = resolutionNotes
+      }
     }
     
     // Also update all subtasks to Done if main task is checked
@@ -1097,8 +1310,7 @@ const executeToggleMainTask = async (task, newStatus) => {
       for (const sub of task.subtasks) {
         if (sub.status !== 'Done') {
           sub.status = 'Done'
-          sub.blocked_description = ''
-          promises.push(taskStore.updateProjectTask(route.params.id, sub.id, { status: 'Done', blocked_description: '' }))
+          promises.push(taskStore.updateProjectTask(route.params.id, sub.id, { status: 'Done' }))
         }
       }
       await Promise.all(promises)
@@ -1123,14 +1335,18 @@ const toggleSubtask = async (sub, event) => {
   await executeToggleSubtask(sub, newStatus)
 }
 
-const executeToggleSubtask = async (sub, newStatus) => {
+const executeToggleSubtask = async (sub, newStatus, resolutionNotes = null) => {
   try {
     const updateData = { status: newStatus }
-    if (newStatus === 'Done') updateData.blocked_description = ''
+    if (newStatus === 'Done') {
+      if (resolutionNotes) updateData.resolution_notes = resolutionNotes
+    }
     
     const updated = await taskStore.updateProjectTask(route.params.id, sub.id, updateData)
     sub.status = newStatus
-    if (newStatus === 'Done') sub.blocked_description = ''
+    if (newStatus === 'Done') {
+      if (resolutionNotes) sub.resolution_notes = resolutionNotes
+    }
     
     // Auto-update parent task status based on all subtasks
     if (selectedTask.value && selectedTask.value.subtasks) {
@@ -1156,12 +1372,14 @@ const executeToggleSubtask = async (sub, newStatus) => {
   }
 }
 
+const blockedConfirmReason = ref('')
+
 const confirmBlockedAction = async () => {
-  if (blockedConfirmSubtask.value) {
+  if (blockedConfirmSubtask.value && blockedConfirmReason.value.trim()) {
     if (!blockedConfirmSubtask.value.parent_id) {
-      await executeToggleMainTask(blockedConfirmSubtask.value, 'Done')
+      await executeToggleMainTask(blockedConfirmSubtask.value, 'Done', blockedConfirmReason.value.trim())
     } else {
-      await executeToggleSubtask(blockedConfirmSubtask.value, 'Done')
+      await executeToggleSubtask(blockedConfirmSubtask.value, 'Done', blockedConfirmReason.value.trim())
     }
   }
   closeBlockedConfirmModal()
@@ -1210,20 +1428,40 @@ const confirmBlockTask = async () => {
   }
 }
 
-const unblockTask = async (task) => {
+const unblockTask = (task) => {
+  taskToUnblock.value = task
+  unblockTaskReason.value = ''
+  showUnblockModal.value = true
+}
+
+const cancelUnblockTask = () => {
+  taskToUnblock.value = null
+  unblockTaskReason.value = ''
+  showUnblockModal.value = false
+}
+
+const confirmUnblockTask = async () => {
+  if (!taskToUnblock.value || !unblockTaskReason.value.trim()) return
+
   try {
     const updatedData = {
       status: 'In Progress',
-      blocked_description: null
+      blocked_description: null,
+      resolution_notes: unblockTaskReason.value.trim()
     }
     
-    task.status = 'In Progress'
-    task.blocked_description = null
+    // Update local immediately for responsiveness
+    taskToUnblock.value.status = 'In Progress'
+    taskToUnblock.value.blocked_description = null
+    taskToUnblock.value.resolution_notes = updatedData.resolution_notes
     
-    await taskStore.updateProjectTask(route.params.id, task.id, updatedData)
+    await taskStore.updateProjectTask(route.params.id, taskToUnblock.value.id, updatedData)
+    
+    cancelUnblockTask()
   } catch (error) {
     console.error('Failed to unblock task', error)
-    task.status = 'Blocked'
+    // Revert if failed
+    taskToUnblock.value.status = 'Blocked'
   }
 }
 
@@ -1231,6 +1469,7 @@ const closeBlockedConfirmModal = () => {
   showBlockedConfirmModal.value = false
   blockedConfirmSubtask.value = null
   blockedConfirmEventTarget.value = null
+  blockedConfirmReason.value = ''
 }
 
 const deleteSubtask = async (subId) => {

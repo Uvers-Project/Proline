@@ -8,6 +8,7 @@ export const useTaskStore = defineStore('task', {
     dailyEntries: [],
     weeklyMeetings: [],
     loading: false,
+    activeProjectId: null,
   }),
   actions: {
     async fetchMonthlyPlans(projectId) {
@@ -31,14 +32,31 @@ export const useTaskStore = defineStore('task', {
       this.monthlyPlans = this.monthlyPlans.filter(p => p.id !== planId)
     },
     async fetchProjectTasks(projectId, silent = false) {
-      if (!silent) this.loading = true
+      if (!silent) {
+        this.loading = true
+        if (this.activeProjectId != projectId) {
+          this.projectTasks = [] // Clear immediately to prevent stale data flashing only if project ID changed
+        }
+      }
+      this.activeProjectId = projectId
       try {
         const response = await axios.get(`/api/v1/projects/${projectId}/tasks`)
-        this.projectTasks = response.data
+        if (this.activeProjectId !== projectId) return // Prevent stale request override
+        
+        // Prevent unnecessary Vue reactivity re-renders (blinking) if the data hasn't actually changed during polling
+        if (silent) {
+          if (JSON.stringify(this.projectTasks) !== JSON.stringify(response.data)) {
+            this.projectTasks = response.data
+          }
+        } else {
+          this.projectTasks = response.data
+        }
       } catch (error) {
         console.error('Failed to fetch project tasks', error)
       } finally {
-        if (!silent) this.loading = false
+        if (this.activeProjectId === projectId) {
+          this.loading = false
+        }
       }
     },
     async createProjectTask(projectId, data) {
@@ -170,6 +188,14 @@ export const useTaskStore = defineStore('task', {
       // We will re-fetch the weekly meetings to update the kanban board's unattached problems
       await this.fetchWeeklyMeetings(projectId)
       return response.data
+    },
+    clearProjectTasks() {
+      this.projectTasks = []
+      this.monthlyPlans = []
+      this.dailyEntries = []
+      this.weeklyMeetings = []
+      this.loading = false
+      this.activeProjectId = null
     }
   }
 })

@@ -21,6 +21,9 @@ export const useProjectStore = defineStore('project', {
     },
     async fetchProject(id) {
       this.loading = true
+      if (!this.currentProject || this.currentProject.id != id) {
+        this.currentProject = null // Clear immediately to prevent old project details from flashing, but ONLY if the project ID changed
+      }
       try {
         const response = await axios.get(`/api/v1/projects/${id}`)
         this.currentProject = response.data
@@ -62,6 +65,10 @@ export const useProjectStore = defineStore('project', {
         console.error('Failed to delete project', error)
         throw error
       }
+    },
+    clearCurrentProject() {
+      this.currentProject = null
+      this.loading = false
     }
   }
 })

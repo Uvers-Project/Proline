@@ -1,39 +1,78 @@
 <template>
   <div class="flex flex-col h-screen bg-white relative overflow-hidden">
     
-    <!-- Header with Avatars -->
-    <div class="flex-none p-6 border-b border-gray-100 flex justify-between items-center bg-white z-30 shadow-sm relative">
-       <div class="flex items-center space-x-6">
-          <button @click="router.push(`/projects/${route.params.id}/planning`)" class="text-gray-500 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 p-2.5 rounded-xl transition-all" title="Back to Kanban Board">
+    <!-- Header -->
+    <div class="flex-none px-8 py-6 border-b border-gray-200 bg-white z-30 shadow-sm relative">
+      <div class="flex justify-between items-start">
+        <div class="flex items-start space-x-4">
+          <button @click="router.push('/dashboard')" class="mt-1 text-gray-500 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 p-2.5 rounded-xl transition-all" title="Back to Dashboard">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
           </button>
-          <div>
-             <h2 class="text-2xl font-black text-gray-900">Project Timeline Matrix</h2>
-             <p class="text-xs font-bold text-gray-500 uppercase tracking-widest mt-1">Scroll right to view all weeks</p>
-          </div>
-       </div>
-       <div class="flex items-center space-x-5">
-          <!-- Dev Theme Toggle -->
-          <button @click="toggleTheme" class="text-[10px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-3 py-1.5 rounded-lg uppercase tracking-wider hover:bg-indigo-100 mr-2">Theme V{{colorVariant}}</button>
-          
-          <span class="text-xs font-bold text-gray-400 uppercase tracking-widest mr-3">Team Filter</span>
-          <!-- Avatars -->
-          <div class="flex -space-x-2">
-             <div v-for="member in teamMembers" :key="member.id" 
-                  @click="toggleFilter(member.id)"
-                  :class="[
-                    'w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white border-2 border-white shadow-sm cursor-pointer transition-all hover:-translate-y-1',
-                    activeFilterPic && activeFilterPic !== member.id ? 'opacity-30' : 'opacity-100 ring-2 ring-offset-1 ring-indigo-500'
-                  ]"
-                  :style="{ backgroundColor: getColor(member.name) }"
-                  :title="member.name">
-                {{ getInitials(member.name) }}
+          <div v-if="projectStore.currentProject">
+             <div class="flex items-center gap-3">
+               <h2 class="text-3xl font-black text-gray-900">{{ projectStore.currentProject.name }}</h2>
              </div>
+             <p class="text-sm font-medium text-gray-500 mt-2 max-w-3xl">{{ projectStore.currentProject.description || 'No description provided.' }}</p>
              
-             <!-- Clear Filter -->
-             <button v-if="activeFilterPic" @click="activeFilterPic = null" class="ml-4 text-[10px] font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded-lg uppercase tracking-wider hover:bg-gray-200">Clear</button>
+             <!-- View Switcher -->
+             <div class="flex bg-gray-100/80 p-1 rounded-xl mt-4 w-max border border-gray-200/60">
+               <button @click="router.push(`/projects/${route.params.id}/planning`)" class="px-4 py-2 text-sm font-bold text-gray-500 hover:text-gray-900 rounded-lg hover:bg-white/60 transition-colors flex items-center">
+                 <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2H9V5a2 2 0 002-2h2a2 2 0 012 2"></path></svg>
+                 Kanban Board
+               </button>
+               <button @click="router.push(`/projects/${route.params.id}`)" class="px-4 py-2 text-sm font-bold text-gray-500 hover:text-gray-900 rounded-lg hover:bg-white/60 transition-colors flex items-center">
+                 <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                 Weekly Report
+               </button>
+               <button class="px-4 py-2 text-sm font-bold bg-white text-blue-700 rounded-lg shadow-sm border border-gray-200/50 flex items-center">
+                 <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                 Timeline
+               </button>
+             </div>
           </div>
-       </div>
+          <div v-else class="py-2">
+            <div class="animate-pulse flex space-x-4">
+              <div class="h-8 bg-gray-200 rounded w-48"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Side Filters -->
+        <div class="flex flex-col items-end gap-3 mt-1">
+           <div class="flex items-center space-x-5">
+              <!-- Timeline Mode Toggle -->
+              <div class="flex bg-gray-100 rounded-lg p-0.5 border border-gray-200 mr-2">
+                <button @click="timelineMode = 'Planned'" :class="['px-3 py-1.5 text-xs font-bold rounded-md transition-colors', timelineMode === 'Planned' ? 'bg-white text-gray-900 shadow-sm border border-gray-200/50' : 'text-gray-500 hover:text-gray-700']">
+                  Planned
+                </button>
+                <button @click="timelineMode = 'Real'" :class="['px-3 py-1.5 text-xs font-bold rounded-md transition-colors', timelineMode === 'Real' ? 'bg-blue-600 text-white shadow-sm border border-blue-700' : 'text-gray-500 hover:text-gray-700']">
+                  Real
+                </button>
+              </div>
+
+              <!-- Dev Theme Toggle -->
+              <button @click="toggleTheme" class="text-[10px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-3 py-1.5 rounded-lg uppercase tracking-wider hover:bg-indigo-100 mr-2">Theme V{{colorVariant}}</button>
+              
+              <span class="text-xs font-bold text-gray-400 uppercase tracking-widest mr-3">Team Filter</span>
+              <!-- Avatars -->
+              <div class="flex -space-x-2">
+                 <div v-for="member in teamMembers" :key="member.id" 
+                      @click="toggleFilter(member.id)"
+                      :class="[
+                        'w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white border-2 border-white shadow-sm cursor-pointer transition-all hover:-translate-y-1',
+                        activeFilterPic && activeFilterPic !== member.id ? 'opacity-30' : 'opacity-100 ring-2 ring-offset-1 ring-indigo-500'
+                      ]"
+                      :style="{ backgroundColor: getColor(member.name) }"
+                      :title="member.name">
+                    {{ getInitials(member.name) }}
+                 </div>
+                 
+                 <!-- Clear Filter -->
+                 <button v-if="activeFilterPic" @click="activeFilterPic = null" class="ml-4 text-[10px] font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded-lg uppercase tracking-wider hover:bg-gray-200">Clear</button>
+              </div>
+           </div>
+        </div>
+      </div>
     </div>
 
     <!-- Matrix Grid (Scrollable) -->
@@ -158,10 +197,28 @@
                      <span class="text-sm font-bold text-gray-800">{{ selectedTask.pic.name }}</span>
                   </div>
                </div>
-               <div class="flex items-center justify-between">
-                  <span class="text-xs font-bold text-gray-500 uppercase tracking-wider">Target Week</span>
-                  <span class="text-sm font-bold text-gray-800 bg-white px-2 py-1 rounded border border-gray-200">{{ selectedTask.weekLabel }}</span>
+               
+               <div class="pt-2 pb-2 border-t border-b border-gray-100 flex flex-col space-y-3">
+                  <div class="flex justify-between items-center">
+                    <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Planned Timeline</span>
+                    <span class="text-xs font-bold text-gray-900 bg-white border border-gray-200 px-2 py-1 rounded shadow-sm">
+                      <span v-if="selectedTask.start_date || selectedTask.end_date">
+                        {{ selectedTask.start_date ? selectedTask.start_date.split('T')[0] : '...' }} - {{ selectedTask.end_date ? selectedTask.end_date.split('T')[0] : '...' }}
+                      </span>
+                      <span v-else>Unscheduled</span>
+                    </span>
+                  </div>
+                  <div class="flex justify-between items-center">
+                    <span class="text-[10px] font-bold text-blue-500 uppercase tracking-wider">Real Timeline</span>
+                    <span class="text-xs font-bold text-blue-900 bg-blue-50 border border-blue-200 px-2 py-1 rounded shadow-sm">
+                      <span v-if="selectedTask.real_start_date || selectedTask.real_end_date">
+                        {{ selectedTask.real_start_date ? selectedTask.real_start_date.split('T')[0] : '...' }} - {{ selectedTask.real_end_date ? selectedTask.real_end_date.split('T')[0] : '...' }}
+                      </span>
+                      <span v-else>Pending</span>
+                    </span>
+                  </div>
                </div>
+               
                <div class="flex items-center justify-between">
                   <span class="text-xs font-bold text-gray-500 uppercase tracking-wider">Phase / Lane</span>
                   <span class="text-sm font-bold text-gray-800">{{ selectedTask.category || 'Development' }}</span>
@@ -175,6 +232,14 @@
                </div>
                <p class="text-sm text-amber-900 leading-relaxed font-medium">{{ selectedTask.problemDesc || 'A blocker was reported during the weekly meeting for this task.' }}</p>
             </div>
+            
+            <div v-if="selectedTask.resolution_notes" class="bg-blue-50 rounded-xl p-5 border border-blue-200 shadow-sm">
+               <div class="flex items-center space-x-2 text-blue-800 mb-3">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                  <span class="text-xs font-black uppercase tracking-wider">Resolution Notes</span>
+               </div>
+               <p class="text-sm text-blue-900 leading-relaxed font-medium whitespace-pre-wrap">{{ selectedTask.resolution_notes }}</p>
+            </div>
          </div>
       </div>
     </Transition>
@@ -187,7 +252,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useTaskStore } from '../stores/task'
 import { useProjectStore } from '../stores/project'
@@ -201,16 +266,18 @@ const authStore = useAuthStore()
 
 const selectedTask = ref(null)
 const activeFilterPic = ref(null)
+const timelineMode = ref('Planned') // 'Planned' or 'Real'
 
 onMounted(async () => {
   const projectId = route.params.id;
   if (!projectStore.currentProject || projectStore.currentProject.id != projectId) {
     await projectStore.fetchProject(projectId)
   }
-  if (!taskStore.projectTasks || taskStore.projectTasks.length === 0) {
-    await taskStore.fetchProjectTasks(projectId)
-  }
+  // Always fetch tasks for the new route, because the store might hold the previous project's tasks
+  await taskStore.fetchProjectTasks(route.params.id)
 })
+
+
 
 const teamMembers = computed(() => {
   const all = authStore.allUsers || [];
@@ -257,13 +324,19 @@ const matrixData = computed(() => {
   } else {
     let hasDates = false;
     allTasks.forEach(t => {
-      if (t.start_date) {
-        const d = new Date(t.start_date);
+      const getTargetStart = (task) => timelineMode.value === 'Real' ? (task.real_start_date || task.start_date) : task.start_date;
+      const getTargetEnd = (task) => timelineMode.value === 'Real' ? (task.real_end_date || task.end_date) : task.end_date;
+
+      const tStart = getTargetStart(t);
+      const tEnd = getTargetEnd(t);
+
+      if (tStart) {
+        const d = new Date(tStart);
         if (!hasDates || d < minDate) minDate = d;
         hasDates = true;
       }
-      if (t.end_date) {
-        const d = new Date(t.end_date);
+      if (tEnd) {
+        const d = new Date(tEnd);
         if (!hasDates || d > maxDate) maxDate = d;
         hasDates = true;
       }
@@ -375,8 +448,11 @@ const matrixData = computed(() => {
     
     const phase = task.category || 'Development'
     
-    const startWeekId = getWeekId(task.start_date);
-    const endWeekId = getWeekId(task.end_date);
+    const getTargetStart = (task) => timelineMode.value === 'Real' ? (task.real_start_date || task.start_date) : task.start_date;
+    const getTargetEnd = (task) => timelineMode.value === 'Real' ? (task.real_end_date || task.end_date) : task.end_date;
+
+    const startWeekId = getWeekId(getTargetStart(task));
+    const endWeekId = getWeekId(getTargetEnd(task));
     
     let startIndex = getWeekIndex(startWeekId);
     let endIndex = getWeekIndex(endWeekId);

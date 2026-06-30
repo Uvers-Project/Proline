@@ -24,6 +24,9 @@ class Task extends Model
         'blocked_description',
         'start_date',
         'end_date',
+        'real_start_date',
+        'real_end_date',
+        'resolution_notes',
         'target_week',
         'estimated_duration',
         'assigned_to',
@@ -33,6 +36,8 @@ class Task extends Model
     protected $casts = [
         'start_date' => 'date',
         'end_date' => 'date',
+        'real_start_date' => 'date',
+        'real_end_date' => 'date',
     ];
 
     public function project()
